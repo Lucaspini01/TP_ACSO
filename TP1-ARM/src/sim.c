@@ -18,14 +18,18 @@ void process_instruction() {
     uint32_t instr = mem_read_32(CURRENT_STATE.PC);
     printf("Instrucción: 0x%08x\n", instr);
 
-    uint32_t opcode = (instr >> 21) & 0x7FF;
-    printf("Opcode: 0x%03x\n", opcode);
+    uint32_t opcode11 = (instr >> 21) & 0x7FF;
+    uint32_t opcode10 = (instr >> 22) & 0x3FF;
+    uint32_t opcode9  = (instr >> 23) & 0x1FF;
+    uint32_t opcode6  = (instr >> 26) & 0x3F;
 
-    switch (opcode) {
+    printf("Opcode11: 0x%03x\n", opcode11);
+
+    switch (opcode11) {
 
         // ----------- ADD (Immediate) - sin flags -----------
-        case 0x588:
-        case 0x488: {
+        case 0b10110001000:
+        case 0b10010001000: {
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t imm12 = (instr >> 10) & 0xFFF;
@@ -43,7 +47,7 @@ void process_instruction() {
         }
 
         // ----------- ADDS (Register) - con flags -----------
-        case 0x558:
+        case 0b10101011000:
         {
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
@@ -57,9 +61,9 @@ void process_instruction() {
         }
 
         // ----------- ADDS (Immediate) - con flags -----------
-        case 0x798:
-        case 0x718:
-        case 0x58A: {
+        case 0b11110011000:
+        case 0b11100011000:
+        case 0b10110001010: {
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t imm12 = (instr >> 10) & 0xFFF;
@@ -79,8 +83,8 @@ void process_instruction() {
         }
 
         // ----------- SUB (Register) - sin flags -----------
-        case 0x458:
-        case 0x658: {
+        case 0b10001011000:
+        case 0b11001011000: {
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t rm = (instr >> 16) & 0x1F;
@@ -91,7 +95,7 @@ void process_instruction() {
         }
 
         // ----------- SUBS (Immediate) - con flags -----------
-        case 0x788: {
+        case 0b11110001000: {
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t imm12 = (instr >> 10) & 0xFFF;
@@ -106,7 +110,7 @@ void process_instruction() {
         }
 
         // ----------- SUBS (Register) - con flags -----------
-        case 0x758: {
+        case 0b11101011000: {
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t rm = (instr >> 16) & 0x1F;
@@ -119,7 +123,7 @@ void process_instruction() {
         }
 
         // ----------- ANDS -----------
-        case 0x750: { // ANDS
+        case 0b11101010000: { // ANDS
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t rm = (instr >> 16) & 0x1F;
@@ -132,7 +136,7 @@ void process_instruction() {
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;
         }
-        case 0x650: { // EOR
+        case 0b11001010000: { // EOR
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t rm = (instr >> 16) & 0x1F;
@@ -158,37 +162,8 @@ void process_instruction() {
             break;
         }
 
-        case 0x358: { // UBFM
-            uint32_t rd = instr & 0x1F;
-            uint32_t rn = (instr >> 5) & 0x1F;
-            uint32_t immr = (instr >> 16) & 0x3F;
-            uint32_t imms = (instr >> 10) & 0x3F;
         
-            // Alias: LSR Xd, Xn, #shift
-            if (imms == 63) {
-                uint64_t value = (uint64_t)CURRENT_STATE.REGS[rn];
-                NEXT_STATE.REGS[rd] = value >> immr;
-            }
-        
-            // Alias: LSL Xd, Xn, #shift
-            else if (((immr + 1) & 0x3F) == imms) {
-                uint64_t value = (uint64_t)CURRENT_STATE.REGS[rn];
-                uint32_t shift = 63 - imms;
-                NEXT_STATE.REGS[rd] = value << shift;
-            }
-        
-            // Otra forma de UBFM no implementada
-            else {
-                printf("UBFM no reconocido como alias de LSL/LSR. immr=%u, imms=%u\n", immr, imms);
-                RUN_BIT = 0;
-            }
-        
-            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-            break;
-        }
-
-        
-        case 0x694: { // MOVZ (hw = 0)
+        case 0b11010010100: { // MOVZ (hw = 0)
             uint32_t rd = instr & 0x1F;                 // bits [4:0]: destino
             uint64_t imm16 = (instr >> 5) & 0xFFFF;     // bits [20:5]: inmediato de 16 bits
             uint32_t hw = (instr >> 21) & 0x3;          // bits [22:21]: shift selector (hw)
@@ -201,7 +176,7 @@ void process_instruction() {
             break;
         }
         
-        case 0x7C0: { // STUR
+        case 0b11111000000: { // STUR
             uint32_t rt = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             int32_t imm9 = (instr >> 12) & 0x1FF;
@@ -215,7 +190,7 @@ void process_instruction() {
             break;
         }
         
-        case 0x1C0: { // STURB
+        case 0b111000000: { // STURB
             uint32_t rt = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             int32_t imm9 = (instr >> 12) & 0x1FF;
@@ -229,7 +204,7 @@ void process_instruction() {
             break;
         }
         
-        case 0x5C0: { // STURH
+        case 0b10111000000: { // STURH
             uint32_t rt = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             int32_t imm9 = (instr >> 12) & 0x1FF;
@@ -247,7 +222,7 @@ void process_instruction() {
             break;
         }
         
-        case 0x7C2: { // LDUR
+        case 0b11111000010: { // LDUR
             uint32_t rt = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             int32_t imm9 = (instr >> 12) & 0x1FF;
@@ -263,7 +238,7 @@ void process_instruction() {
             break;
         }
         
-        case 0x1C2: { // LDURB
+        case 0b111000010: { // LDURB
             uint32_t rt = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             int32_t imm9 = (instr >> 12) & 0x1FF;
@@ -278,7 +253,7 @@ void process_instruction() {
             break;
         }
         
-        case 0x5C2: { // LDURH
+        case 0b10111000010: { // LDURH
             uint32_t rt = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             int32_t imm9 = (instr >> 12) & 0x1FF;
@@ -294,7 +269,7 @@ void process_instruction() {
         }
 
         // ----------- B (Branch incondicional) -----------
-        case 0x0A0: {
+        case 0b10100000: {
             int32_t imm26 = instr & 0x03FFFFFF;
             if (imm26 & (1 << 25)) imm26 |= 0xFC000000; // Sign extend
             int32_t offset = imm26 << 2;
@@ -303,7 +278,7 @@ void process_instruction() {
         }
 
         // ----------- B.cond (Branch condicional) -----------
-        case 0x2A0: { // opcode para B.cond
+        case 0b1010100000  : { // opcode para B.cond
             int32_t imm19 = (instr >> 5) & 0x7FFFF;  // bits 23-5
             uint32_t cond = instr & 0xF;             // bits 3-0
 
@@ -341,7 +316,7 @@ void process_instruction() {
             break;
         }
     
-        case 0x6a2: {   // HALT: Detener la simulación
+        case 0b11010100010: {   // HALT: Detener la simulación
             RUN_BIT = 0;
             printf("Instrucción HALT detected\n");
             break;
