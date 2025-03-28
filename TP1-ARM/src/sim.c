@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <stdint.h>
 #include "shell.h"
@@ -10,6 +11,11 @@
 void update_flags(int64_t result) {
     NEXT_STATE.FLAG_Z = (result == 0);
     NEXT_STATE.FLAG_N = (result < 0);
+}
+
+int64_t sign_extend(uint64_t value, int bits) {
+    int64_t mask = 1LL << (bits - 1);
+    return (value ^ mask) - mask;
 }
 
 
@@ -109,7 +115,8 @@ void process_instruction() {
    
 
         // ----------- SUBS (Immediate) - con flags -----------
-        case 0b10110001000: 
+        case 0b11110001000:
+        case 0b11110001010: 
         {
             uint32_t rd = instr & 0x1F;             // bits [4:0]
             uint32_t rn = (instr >> 5) & 0x1F;      // bits [9:5]
@@ -142,11 +149,13 @@ void process_instruction() {
 
             int64_t result = CURRENT_STATE.REGS[rn] - CURRENT_STATE.REGS[rm];
 
-            // Update flags
-            update_flags(result);
+           
 
             // Si no es CMP, guardar resultado
             if (rd != XZR) NEXT_STATE.REGS[rd] = result;
+
+            // Update flags
+            update_flags(result);
 
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             return;
@@ -334,27 +343,34 @@ void process_instruction() {
             int32_t imm19 = (instr >> 5) & 0x7FFFF; // bits [23:5]
             int64_t offset = sign_extend(imm19 << 2, 21); // signed 19-bit offset shifted << 2
             uint32_t cond = instr & 0xF; // bits [3:0]
+
+            //
+            int FLAG_N = CURRENT_STATE.FLAG_N;
+            int FLAG_Z = CURRENT_STATE.FLAG_Z;
+            int FLAG_C = 0; // No se usa en este caso
+            int FLAG_V = 0; // No se usa en este caso
+            // Verificar la condición
     
             bool should_branch = false;
     
             switch (cond) {
                 case 0x0: // BEQ
-                    should_branch = (FLAGS.Z == 1);
+                    should_branch = (CURRENT_STATE.FLAG_Z == 1);
                     break;
                 case 0x1: // BNE
-                    should_branch = (FLAGS.Z == 0);
+                    should_branch = (FLAG_Z == 0);
                     break;
                 case 0xA: // BGE
-                    should_branch = (FLAGS.N == FLAGS.V);
+                    should_branch = (FLAG_N == FLAG_V);
                     break;
                 case 0xB: // BLT
-                    should_branch = (FLAGS.N != FLAGS.V);
+                    should_branch = (FLAG_N != FLAG_V);
                     break;
                 case 0xC: // BGT
-                    should_branch = (FLAGS.Z == 0 && FLAGS.N == FLAGS.V);
+                    should_branch = (FLAG_Z == 0 && FLAG_N == FLAG_V);
                     break;
                 case 0xD: // BLE
-                    should_branch = (FLAGS.Z == 1 || FLAGS.N != FLAGS.V);
+                    should_branch = (FLAG_Z == 1 || FLAG_N != FLAG_V);
                     break;
                 default:
                     // No hacemos nada si es una condición no implementada
