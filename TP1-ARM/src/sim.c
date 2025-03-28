@@ -25,105 +25,135 @@ void process_instruction() {
 
     printf("Opcode11: 0x%03x\n", opcode11);
 
+
     switch (opcode11) {
 
         // ----------- ADD (Immediate) - sin flags -----------
-        case 0b10110001000:
-        case 0b10010001000: {
-            uint32_t rd = instr & 0x1F;
-            uint32_t rn = (instr >> 5) & 0x1F;
-            uint32_t imm12 = (instr >> 10) & 0xFFF;
-            uint32_t shift = (instr >> 22) & 0x3;
-
-            if (shift == 0 || shift == 1) {
-                uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
-                NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rn] + imm;
-                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-            } else {
-                printf("ADD (imm): shift inválido (shift=%u)\n", shift);
-                RUN_BIT = 0;
-            }
-            break;
-        }
-
-        // ----------- ADDS (Register) - con flags -----------
-        case 0b10101011000:
+        case 0b10010001100:
+        case 0b10010001010:
         {
-            uint32_t rd = instr & 0x1F;
-            uint32_t rn = (instr >> 5) & 0x1F;
-            uint32_t rm = (instr >> 16) & 0x1F;
+            uint32_t rd = instr & 0x1F;             // bits [4:0]
+        uint32_t rn = (instr >> 5) & 0x1F;      // bits [9:5]
+        uint32_t rm = (instr >> 16) & 0x1F;     // bits [20:16]
+        uint32_t imm6 = (instr >> 10) & 0x3F;   // bits [15:10]
+        uint32_t shift_type = (instr >> 22) & 0x3; // bits [23:22]
 
-            int64_t result = CURRENT_STATE.REGS[rn] + CURRENT_STATE.REGS[rm];
-            NEXT_STATE.REGS[rd] = result;
-            update_flags(result);
-            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-            break;
-        }
+        uint64_t operand2 = CURRENT_STATE.REGS[rm];
 
-        // ----------- ADDS (Immediate) - con flags -----------
-        case 0b11110011000:
-        case 0b11100011000:
-        case 0b10110001010: {
-            uint32_t rd = instr & 0x1F;
-            uint32_t rn = (instr >> 5) & 0x1F;
-            uint32_t imm12 = (instr >> 10) & 0xFFF;
-            uint32_t shift = (instr >> 22) & 0x3;
-
-            if (shift == 0 || shift == 1) {
-                uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
-                int64_t result = CURRENT_STATE.REGS[rn] + imm;
-                NEXT_STATE.REGS[rd] = result;
-                update_flags(result);
-                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-            } else {
-                printf("ADDS (imm): shift inválido (shift=%u)\n", shift);
+        // Aplicar el shift correspondiente
+        switch (shift_type) {
+            case 0b00: // LSL
+                operand2 <<= imm6;
+                break;
+            case 0b01: // LSR
+                operand2 >>= imm6;
+                break;
+            case 0b10: // ASR
+                operand2 = ((int64_t)operand2) >> imm6;
+                break;
+            default:
+                printf("Shift inválido para ADD (shift=%u)\n", shift_type);
                 RUN_BIT = 0;
-            }
-            break;
+                return;
         }
 
-        // ----------- SUB (Register) - sin flags -----------
-        case 0b10001011000:
-        case 0b11001011000: {
-            uint32_t rd = instr & 0x1F;
-            uint32_t rn = (instr >> 5) & 0x1F;
-            uint32_t rm = (instr >> 16) & 0x1F;
+        NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rn] + operand2;
+        NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+        break;
+    }
+        // ----------- ADDS (Immediate) - con flags -----------
+        case 0b10110001010: // Opcode for ADDS (Immediate) with flags
+        case 0b10110001000: // Alternate opcode for ADDS (Immediate) with flags
+        {
+            uint32_t rd = instr & 0x1F;             // Extract destination register (bits [4:0])
+            uint32_t rn = (instr >> 5) & 0x1F;      // Extract first operand register (bits [9:5])
+            uint32_t imm12 = (instr >> 10) & 0xFFF; // Extract 12-bit immediate value (bits [21:10])
+            uint32_t shift = (instr >> 22) & 0x3;   // Extract shift type (bits [23:22])
 
-            NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rn] - CURRENT_STATE.REGS[rm];
-            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-            break;
-        }
-
-        // ----------- SUBS (Immediate) - con flags -----------
-        case 0b11110001000: {
-            uint32_t rd = instr & 0x1F;
-            uint32_t rn = (instr >> 5) & 0x1F;
-            uint32_t imm12 = (instr >> 10) & 0xFFF;
-            uint32_t shift = (instr >> 22) & 0x3;
-
+            // Apply shift to the immediate value if required
             uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
-            int64_t result = CURRENT_STATE.REGS[rn] - imm;
+
+            // Perform addition of the first operand and the immediate value
+            int64_t result = CURRENT_STATE.REGS[rn] + imm;
+
+            // Update the processor flags (Zero and Negative) based on the result
             update_flags(result);
+
+            // Write the result to the destination register if it's not XZR (zero register)
             if (rd != XZR) NEXT_STATE.REGS[rd] = result;
+
+            // Increment the program counter to point to the next instruction
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             return;
         }
 
-        // ----------- SUBS (Register) - con flags -----------
-        case 0b11101011000: {
+        // ----------- ADDS (Extended Register) - con flags -----------
+        case 0b10101011001:
+        {
+            uint32_t rd = instr & 0x1F;        // Destino Xd (bits 4-0)
+            uint32_t rn = (instr >> 5) & 0x1F; // Primer operando Xn (bits 9-5)
+            uint32_t rm = (instr >> 16) & 0x1F;// Segundo operando Xm (bits 20-16)
+
+            int64_t result = CURRENT_STATE.REGS[rn] + CURRENT_STATE.REGS[rm];
+
+            // Guardar el resultado en el registro destino
+            NEXT_STATE.REGS[rd] = result;
+
+            // Actualizar flags
+            update_flags(result);
+
+            // Incrementar el PC
+            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            break;
+        }
+   
+
+        // ----------- SUBS (Immediate) - con flags -----------
+        case 0b10110001000: 
+        {
+            uint32_t rd = instr & 0x1F;             // bits [4:0]
+            uint32_t rn = (instr >> 5) & 0x1F;      // bits [9:5]
+            uint32_t imm12 = (instr >> 10) & 0xFFF; // bits [21:10]
+            uint32_t shift = (instr >> 22) & 0x3;   // bits [23:22]
+    
+            // Aplica shift al valor inmediato si es necesario
+            uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
+    
+            // Realiza la resta: operand1 - inmediato
+            int64_t result = CURRENT_STATE.REGS[rn] - imm;
+    
+            // Actualiza los flags N y Z
+            update_flags(result);
+    
+            // Guarda el resultado en rd si no es XZR
+            if (rd != XZR) NEXT_STATE.REGS[rd] = result;
+    
+            // Avanza el program counter
+            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            return;
+        }
+
+        // ----------- SUBS (Extended Register) - con flags -----------
+        case 0b11101011001:
+         { // SUBS
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t rm = (instr >> 16) & 0x1F;
 
             int64_t result = CURRENT_STATE.REGS[rn] - CURRENT_STATE.REGS[rm];
+
+            // Update flags
             update_flags(result);
+
+            // Si no es CMP, guardar resultado
             if (rd != XZR) NEXT_STATE.REGS[rd] = result;
+
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             return;
         }
 
         // ----------- ANDS -----------
-        case 0b11101010000: { // ANDS
+        case 0b11101010000: {
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t rm = (instr >> 16) & 0x1F;
@@ -136,7 +166,10 @@ void process_instruction() {
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;
         }
-        case 0b11001010000: { // EOR
+
+         // ----------- EOR -----------
+
+        case 0b11001010000: { 
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t rm = (instr >> 16) & 0x1F;
@@ -149,7 +182,10 @@ void process_instruction() {
             break;
         }
         
-        case 0b10101010000: { // ORR
+         // ----------- ORR -----------
+
+        case 0b10101010000: 
+        {
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             uint32_t rm = (instr >> 16) & 0x1F;
@@ -162,8 +198,10 @@ void process_instruction() {
             break;
         }
 
-        
-        case 0b11010010100: { // MOVZ (hw = 0)
+         // ----------- MOVZ (hw = 0) -----------
+
+        case 0b11010010100: 
+        { 
             uint32_t rd = instr & 0x1F;                 // bits [4:0]: destino
             uint64_t imm16 = (instr >> 5) & 0xFFFF;     // bits [20:5]: inmediato de 16 bits
             uint32_t hw = (instr >> 21) & 0x3;          // bits [22:21]: shift selector (hw)
@@ -175,8 +213,10 @@ void process_instruction() {
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;
         }
+
+        // ----------- STUR -----------
         
-        case 0b11111000000: { // STUR
+        case 0b11111000000: {
             uint32_t rt = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             int32_t imm9 = (instr >> 12) & 0x1FF;
@@ -268,52 +308,66 @@ void process_instruction() {
             break;
         }
 
-        // ----------- B (Branch incondicional) -----------
-        case 0b10100000: {
+       // ----------- B (Branch incondicional) -----------
+        case 0b00010100000: 
+        {
+            // Extraer immediate de 26 bits, shift-left por 2 para agregar los dos ceros
             int32_t imm26 = instr & 0x03FFFFFF;
-            if (imm26 & (1 << 25)) imm26 |= 0xFC000000; // Sign extend
-            int32_t offset = imm26 << 2;
+            int64_t offset = sign_extend(imm26 << 2, 28); // signo extendido a 64 bits
+
             NEXT_STATE.PC = CURRENT_STATE.PC + offset;
-            break;
+            return;
+        }
+
+        // ----------- BR -----------
+        case 0b11010110000:
+        {
+            uint32_t rn = (instr >> 5) & 0x1F; // bits [9:5] — registro fuente
+
+            NEXT_STATE.PC = CURRENT_STATE.REGS[rn];
+            return;
         }
 
         // ----------- B.cond (Branch condicional) -----------
-        case 0b1010100000  : { // opcode para B.cond
-            int32_t imm19 = (instr >> 5) & 0x7FFFF;  // bits 23-5
-            uint32_t cond = instr & 0xF;             // bits 3-0
-
-            if (imm19 & (1 << 18)) imm19 |= 0xFFF80000;  // Sign extend
-            int32_t offset = imm19 << 2;
-
-            int should_branch = 0;
+        case 0b01010100000: // B.cond
+        {
+            int32_t imm19 = (instr >> 5) & 0x7FFFF; // bits [23:5]
+            int64_t offset = sign_extend(imm19 << 2, 21); // signed 19-bit offset shifted << 2
+            uint32_t cond = instr & 0xF; // bits [3:0]
+    
+            bool should_branch = false;
+    
             switch (cond) {
-                case 0x0:  // EQ (Z == 1)
-                    should_branch = NEXT_STATE.FLAG_Z;
+                case 0x0: // BEQ
+                    should_branch = (FLAGS.Z == 1);
                     break;
-                case 0x1:  // NE (Z == 0)
-                    should_branch = !NEXT_STATE.FLAG_Z;
+                case 0x1: // BNE
+                    should_branch = (FLAGS.Z == 0);
                     break;
-                case 0xC:  // LT (N != V), como V=0, equivale a N==1
-                    should_branch = NEXT_STATE.FLAG_N;
+                case 0xA: // BGE
+                    should_branch = (FLAGS.N == FLAGS.V);
                     break;
-                case 0xD:  // GE (N == V), como V=0, equivale a N==0
-                    should_branch = !NEXT_STATE.FLAG_N;
+                case 0xB: // BLT
+                    should_branch = (FLAGS.N != FLAGS.V);
                     break;
-                case 0xE:  // AL (siempre)
-                    should_branch = 1;
+                case 0xC: // BGT
+                    should_branch = (FLAGS.Z == 0 && FLAGS.N == FLAGS.V);
+                    break;
+                case 0xD: // BLE
+                    should_branch = (FLAGS.Z == 1 || FLAGS.N != FLAGS.V);
                     break;
                 default:
-                    printf("Condición no soportada: %u\n", cond);
-                    RUN_BIT = 0;
-                    return;
+                    // No hacemos nada si es una condición no implementada
+                    break;
             }
-
-            if (should_branch)
+    
+            if (should_branch) {
                 NEXT_STATE.PC = CURRENT_STATE.PC + offset;
-            else
+            } else {
                 NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-
-            break;
+            }
+    
+            return;
         }
     
         case 0b11010100010: {   // HALT: Detener la simulación
@@ -321,12 +375,17 @@ void process_instruction() {
             printf("Instrucción HALT detected\n");
             break;
         }
+
         default: {
             // Si la instrucción no es reconocida, detener la simulación
             RUN_BIT = 0;
             printf("Instrucción no reconocida: 0x%08x\n", instr);
             break;
         }
+      
+        
+
     }
+
 
 }
