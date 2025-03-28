@@ -94,7 +94,7 @@ void process_instruction() {
         }
 
         // ----------- ADDS (Extended Register) - con flags -----------
-        case 0b10101011001:
+        case 0b10101011000:
         {
             uint32_t rd = instr & 0x1F;        // Destino Xd (bits 4-0)
             uint32_t rn = (instr >> 5) & 0x1F; // Primer operando Xn (bits 9-5)
@@ -141,7 +141,7 @@ void process_instruction() {
         }
 
         // ----------- SUBS (Extended Register) - con flags -----------
-        case 0b11101011001:
+        case 0b11101011000:
          { // SUBS
             uint32_t rd = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
@@ -403,5 +403,5 @@ void process_instruction() {
 
     }
 
-
+    
 }
