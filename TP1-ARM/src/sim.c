@@ -67,6 +67,24 @@ void process_instruction() {
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
         break;
     }
+    // ----------- ADD (Shifted Register) (opcode: 0b10001011000) -----------
+        case 0b10010001000:
+    {
+        uint32_t rd = instr & 0x1F;
+        uint32_t rn = (instr >> 5) & 0x1F;
+        uint32_t rm = (instr >> 16) & 0x1F;
+        uint32_t shift = (instr >> 22) & 0x3;
+        uint32_t amount = (instr >> 10) & 0x3F;
+
+        uint64_t operand2 = CURRENT_STATE.REGS[rm];
+        if (shift == 0) operand2 <<= amount;  // LSL
+        else if (shift == 1) operand2 >>= amount;  // LSR
+
+        NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rn] + operand2;
+        NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+        break;
+    }
+
         // ----------- ADDS (Immediate) - con flags -----------
         case 0b10110001010: // Opcode for ADDS (Immediate) with flags
         case 0b10110001000: // Alternate opcode for ADDS (Immediate) with flags
@@ -251,8 +269,8 @@ void process_instruction() {
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;
         }
-        
-        case 0b10111000000: { // STURH
+        case 0b01111000000: { // STURH (opcode11 == 0x3C0)
+            printf(">> Entrando al case STURH (0x3C0)\n");
             uint32_t rt = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             int32_t imm9 = (instr >> 12) & 0x1FF;
@@ -301,7 +319,8 @@ void process_instruction() {
             break;
         }
         
-        case 0b10111000010: { // LDURH
+        case 0b01111000010: { // LDURH (opcode11 == 0x3C2)
+            printf(">> Entrando al case LDURH (0x3C2)\n");
             uint32_t rt = instr & 0x1F;
             uint32_t rn = (instr >> 5) & 0x1F;
             int32_t imm9 = (instr >> 12) & 0x1FF;
@@ -314,7 +333,7 @@ void process_instruction() {
             NEXT_STATE.REGS[rt] = (uint64_t)half;
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;
-        }
+        }               
 
        // ----------- B (Branch incondicional) -----------
         case 0b00010100000: 
@@ -327,15 +346,12 @@ void process_instruction() {
             return;
         }
 
-        // ----------- BR -----------
-        case 0b11010110000:
-        {
-            uint32_t rn = (instr >> 5) & 0x1F; // bits [9:5] — registro fuente
-
-            NEXT_STATE.PC = CURRENT_STATE.REGS[rn];
+        case 0b11010110000: {  // BR
+            uint32_t rn = (instr >> 5) & 0x1F; // bits [9:5] — registro que contiene la dirección
+            NEXT_STATE.PC = CURRENT_STATE.REGS[rn]; // salto incondicional
             return;
         }
-
+        
         // ----------- B.cond (Branch condicional) -----------
         case 0b1010100000:
                
