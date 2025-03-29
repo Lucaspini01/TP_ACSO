@@ -149,8 +149,6 @@ void process_instruction() {
 
             int64_t result = CURRENT_STATE.REGS[rn] - CURRENT_STATE.REGS[rm];
 
-           
-
             // Si no es CMP, guardar resultado
             if (rd != XZR) NEXT_STATE.REGS[rd] = result;
 
@@ -338,7 +336,8 @@ void process_instruction() {
         }
 
         // ----------- B.cond (Branch condicional) -----------
-        case 0b01010100000: // B.cond
+        case 0b1010100000:
+               
         {
             int32_t imm19 = (instr >> 5) & 0x7FFFF; // bits [23:5]
             int64_t offset = sign_extend(imm19 << 2, 21); // signed 19-bit offset shifted << 2
@@ -389,6 +388,9 @@ void process_instruction() {
         case 0b11010100010: {   // HALT: Detener la simulación
             RUN_BIT = 0;
             printf("Instrucción HALT detected\n");
+
+            //incrementar el PC para la siguiente instrucción
+            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;
         }
 
