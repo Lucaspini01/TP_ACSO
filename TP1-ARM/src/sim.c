@@ -221,6 +221,7 @@ void process_instruction() {
             break;
         }
 
+    
         // ----------- STUR -----------
         
         case 0b11111000000: {
@@ -384,6 +385,58 @@ void process_instruction() {
     
             return;
         }
+
+        //EL ultimo bit no es del opcode, es del immr por eso los dos casos.
+        case 0b11010011011:
+        case 0b11010011010: 
+        {
+            uint32_t rd = instr & 0x1F;
+            uint32_t rn = (instr >> 5) & 0x1F;
+            uint32_t immr = (instr >> 16) & 0x3F;
+            uint32_t imms = (instr >> 10) & 0x3F;
+            uint32_t N = (instr >> 22) & 0x1;
+            uint32_t sf = (instr >> 31) & 0x1;
+            
+            
+
+            // Solo manejamos versión de 64 bits
+            if (sf == 1 && N == 1) {
+                enum { LSL, LSR, OTHER } op_type;
+    
+                if (imms != 63) {
+                    op_type = LSL;
+                } else if (imms == 63) {
+                    op_type = LSR;
+                } else {
+                    op_type = OTHER;
+                }
+    
+                uint64_t value = CURRENT_STATE.REGS[rn];
+                uint64_t result = 0;
+
+                printf("UBFM: immr=%u, imms=%u\n", immr, imms);
+    
+                switch (op_type) {
+                    case LSL:
+                        result = value << (64 - immr);
+                        break;
+                    case LSR:
+                        result = value >> immr;
+                        break;
+                    case OTHER:
+                        break; // No hacemos nada si no es LSL ni LSR
+                }
+    
+                if (op_type != OTHER && rd != XZR) {
+                    NEXT_STATE.REGS[rd] = result;
+                }
+    
+                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+                return;
+            }
+    
+            break; // No es 64-bit UBFM
+        }
     
         case 0b11010100010: {   // HALT: Detener la simulación
             RUN_BIT = 0;
@@ -393,17 +446,17 @@ void process_instruction() {
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;
         }
-
-        default: {
-            // Si la instrucción no es reconocida, detener la simulación
+    
+        default :
+        //: {
+            printf("Instrucción no implementada: 0x%08x\n", instr);
             RUN_BIT = 0;
-            printf("Instrucción no reconocida: 0x%08x\n", instr);
-            break;
+            return;
         }
-      
-        
+
+            
 
     }
 
     
-}
+
