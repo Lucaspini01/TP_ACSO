@@ -21,11 +21,11 @@ salto_cbnz:
 // Valor que siempre debería escribirse
 MOVZ X6, #0xAAAA
 
-// Guardamos los resultados en memoria a través de X10 como puntero base
-
-// Inicializamos X10 = 0x400000 (dirección arbitraria donde escribir)
-MOVZ X10, #0x0
-MOVK X10, #0x4000, LSL #16
+// Inicializar X10 = 0x400000 sin usar MOVK
+MOVZ X10, #0x0        // X10 = 0
+MOVZ X9,  #0x4000     // X9 = 0x4000
+LSL  X9, X9, #16      // X9 = 0x400000
+ADD  X10, X10, X9     // X10 = 0x400000
 
 // Guardar registros
 STUR X1, [X10, #0]

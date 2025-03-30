@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include "shell.h"
 
+#include "instrucciones.h"
+
 #define XZR 31
 
 void update_flags(int64_t result) {
@@ -19,7 +21,6 @@ int64_t sign_extend(uint64_t value, int bits) {
 }
 
 //Instrucciones de ARM-V8
-
 
 void add_immediate(uint32_t instr){
     int32_t rd = instr & 0x1F;             // bits [4:0]
@@ -49,7 +50,6 @@ void add_immediate(uint32_t instr){
 
     NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rn] + operand2;
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-    break;
 }
 
 void add_shifted_register(uint32_t instr){
@@ -65,7 +65,6 @@ void add_shifted_register(uint32_t instr){
 
     NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rn] + operand2;
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-    break;
 
 }
 
@@ -89,7 +88,6 @@ void adds_immediate(uint32_t instr) {
 
     // Increment the program counter to point to the next instruction
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-    return;
 }
 
 void adds_extended_register(uint32_t instr) {
@@ -107,7 +105,6 @@ void adds_extended_register(uint32_t instr) {
 
     // Incrementar el PC
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-    break;
 }
 
 void subs_immediate(uint32_t instr){
@@ -130,8 +127,6 @@ void subs_immediate(uint32_t instr){
 
         // Avanza el program counter
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        return;
-
 }
 
 void subs_extended_register(uint32_t instr){
@@ -148,10 +143,6 @@ void subs_extended_register(uint32_t instr){
         update_flags(result);
 
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        return;
-    
-
-
 }
 
 void mul(uint32_t instr){
@@ -166,10 +157,9 @@ void mul(uint32_t instr){
         }
 
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        break;
 }
 
-void ands(uint32_t intrs){
+void ands(uint32_t instr){
     uint32_t rd = instr & 0x1F;
         uint32_t rn = (instr >> 5) & 0x1F;
         uint32_t rm = (instr >> 16) & 0x1F;
@@ -180,7 +170,6 @@ void ands(uint32_t intrs){
         update_flags(result);
 
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        break;
 }
 
 void eor(uint32_t instr){
@@ -193,7 +182,6 @@ void eor(uint32_t instr){
         NEXT_STATE.REGS[rd] = result;
 
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        break;
 }
 
 void orr(uint32_t instr){
@@ -206,7 +194,6 @@ void orr(uint32_t instr){
         NEXT_STATE.REGS[rd] = result;
 
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        break;
 }
 
 void movz(uint32_t instr){
@@ -219,7 +206,6 @@ void movz(uint32_t instr){
         }
     
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        break;
 }
 
 void stur(uint32_t instr){
@@ -233,7 +219,6 @@ void stur(uint32_t instr){
         mem_write_32(addr + 4, (uint32_t)(CURRENT_STATE.REGS[rt] >> 32));
     
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        break;
 }
 
 void sturb(uint32_t instr){
@@ -247,7 +232,6 @@ void sturb(uint32_t instr){
         mem_write_32(addr, byte_val);  // Solo escribimos 1 byte en realidad
     
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        break;
 }
 
 void sturh(uint32_t instr){
@@ -265,7 +249,6 @@ void sturh(uint32_t instr){
         mem_write_32(addr, value);
     
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        break;
 }
 
 void ldur(uint32_t instr){
@@ -281,7 +264,6 @@ void ldur(uint32_t instr){
         NEXT_STATE.REGS[rt] = (high << 32) | low;
     
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        break;
 }
 
 void ldurb(uint32_t instr){
@@ -296,7 +278,6 @@ void ldurb(uint32_t instr){
 
     NEXT_STATE.REGS[rt] = (uint64_t)byte;
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-    break;
 }
 
 void ldurh(uint32_t instr){
@@ -311,7 +292,6 @@ void ldurh(uint32_t instr){
 
     NEXT_STATE.REGS[rt] = (uint64_t)half;
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-    break;
 }
 
 void b(uint32_t instr){
@@ -320,13 +300,11 @@ void b(uint32_t instr){
      int64_t offset = sign_extend(imm26 << 2, 28); // signo extendido a 64 bits
 
      NEXT_STATE.PC = CURRENT_STATE.PC + offset;
-     return;
 }
 
 void br(uint32_t instr){
     uint32_t rn = (instr >> 5) & 0x1F; // bits [9:5] — registro que contiene la dirección
     NEXT_STATE.PC = CURRENT_STATE.REGS[rn]; // salto incondicional
-    return;
 }   
 
 void b_cond(uint32_t instr){
@@ -366,15 +344,13 @@ void b_cond(uint32_t instr){
         }
 
         if (should_branch) {
-            int32_t imm19 = (instruction >> 5) & 0x7FFFF; // Extrae el desplazamiento de 19 bits
-            int64_t offset = signextend64(imm19, 19) << 2; // Extiende el signo y ajusta el desplazamiento
+            int32_t imm19 = (instr >> 5) & 0x7FFFF; // Extrae el desplazamiento de 19 bits
+            int64_t offset = sign_extend(imm19, 19) << 2; // Extiende el signo y ajusta el desplazamiento
     
             NEXT_STATE.PC = CURRENT_STATE.PC + offset;
         } else {
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
         }
-
-        return;
 }
 
 void cbz(uint32_t instr){
@@ -387,7 +363,6 @@ void cbz(uint32_t instr){
     } else {
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
     }
-    return;
 }
 
 void cbnz(uint32_t instr){
@@ -400,7 +375,6 @@ void cbnz(uint32_t instr){
     } else {
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
     }
-    return;
 }
 
 void lsl_lsr(uint32_t instr){
@@ -446,17 +420,12 @@ void lsl_lsr(uint32_t instr){
         }
 
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-        return;
     }
-
-    break; // No es 64-bit UBFM
 }
 
 void hlt(uint32_t instr){
     RUN_BIT = 0;
     printf("Instrucción HALT detected\n");
 
-    //incrementar el PC para la siguiente instrucción
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
-    break;
 }
