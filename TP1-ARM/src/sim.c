@@ -34,12 +34,16 @@ InstructionEntry instruction_set[] = {
 
 void process_instruction() {
     uint32_t instr = mem_read_32(CURRENT_STATE.PC);
+
     for (int i = 0; instruction_set[i].execute != NULL; i++) {
         if ((instr & instruction_set[i].mask) == instruction_set[i].opcode) {
+            printf("Matched opcode: 0x%08x\n", instruction_set[i].opcode);
             instruction_set[i].execute(instr);
             return;
         }
     }
+
+
 
     printf("Instrucción no implementada: 0x%08x\n", instr);
     RUN_BIT = 0;

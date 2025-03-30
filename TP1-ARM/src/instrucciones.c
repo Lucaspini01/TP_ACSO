@@ -402,7 +402,6 @@ void lsl_lsr(uint32_t instr){
         uint64_t value = CURRENT_STATE.REGS[rn];
         uint64_t result = 0;
 
-        printf("UBFM: immr=%u, imms=%u\n", immr, imms);
 
         switch (op_type) {
             case LSL:
