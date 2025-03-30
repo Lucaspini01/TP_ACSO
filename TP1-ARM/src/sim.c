@@ -177,6 +177,23 @@ void process_instruction() {
             return;
         }
 
+        // ----------- MUL (Multiply: Rd = Rn * Rm) -----------
+        case 0b10011011000: {  // opcode11 == 0x4D8
+            uint32_t rd = instr & 0x1F;
+            uint32_t rn = (instr >> 5) & 0x1F;
+            uint32_t rm = (instr >> 16) & 0x1F;
+
+            uint64_t result = CURRENT_STATE.REGS[rn] * CURRENT_STATE.REGS[rm];
+
+            if (rd != XZR) {
+                NEXT_STATE.REGS[rd] = result;
+            }
+
+            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            break;
+        }
+
+
         // ----------- ANDS -----------
         case 0b11101010000: {
             uint32_t rd = instr & 0x1F;
@@ -401,6 +418,36 @@ void process_instruction() {
     
             return;
         }
+
+        // ----------- CBZ y CBNZ (opcode6 == 0x0D) -----------
+        // ----------- CBZ ----------- (opcode11 == 0b10110100000)
+        case 0b10110100000: {
+            uint32_t rt = instr & 0x1F;
+            int32_t imm19 = (instr >> 5) & 0x7FFFF;
+            int64_t offset = sign_extend(imm19 << 2, 21);
+
+            if (CURRENT_STATE.REGS[rt] == 0) {
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;
+            } else {
+                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            }
+            return;
+        }
+
+        // ----------- CBNZ ----------- (opcode11 == 0b10110100001)
+        case 0b10110100001: {
+            uint32_t rt = instr & 0x1F;
+            int32_t imm19 = (instr >> 5) & 0x7FFFF;
+            int64_t offset = sign_extend(imm19 << 2, 21);
+
+            if (CURRENT_STATE.REGS[rt] != 0) {
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;
+            } else {
+                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            }
+            return;
+        }
+
 
         //EL ultimo bit no es del opcode, es del immr por eso los dos casos.
         case 0b11010011011:
