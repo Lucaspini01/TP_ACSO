@@ -12,8 +12,8 @@ InstructionEntry instruction_set[] = {
     {0xEA     << 24, 0xFF000000, ands}, 
     {0xCA     << 24, 0xFF000000, eor},  
     {0xAA     << 24, 0xFF000000, orr},  
-    {0x03     << 26, 0xFC000000, b},              
-    {0x3587C0 << 10, 0xFFFFFC00, br},   
+    {0x05     << 26, 0xFC000000, b},              
+    {0xD6     << 24, 0xFF000000, br},   
     {0x54     << 24, 0xFF000000, b_cond},  
     {0xD3     << 24, 0xFF000000, lsl_lsr},
     {0xF80    << 20, 0xFFF00000, stur},
@@ -34,16 +34,12 @@ InstructionEntry instruction_set[] = {
 
 void process_instruction() {
     uint32_t instr = mem_read_32(CURRENT_STATE.PC);
-
     for (int i = 0; instruction_set[i].execute != NULL; i++) {
         if ((instr & instruction_set[i].mask) == instruction_set[i].opcode) {
-            printf("Matched opcode: 0x%08x\n", instruction_set[i].opcode);
             instruction_set[i].execute(instr);
             return;
         }
     }
-
-
 
     printf("Instrucción no implementada: 0x%08x\n", instr);
     RUN_BIT = 0;

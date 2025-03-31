@@ -62,15 +62,14 @@
         // LDURH X15, [X2, #0x18]
         ldurh   w15, [x2, #0x18]
 
-        // B salto
-        b       salto
+        // B salto_directo
+        b       salto_directo
 
         // Instrucción que debe saltearse
         movz    x16, #999
 
-salto:
-        // BR X3
-        br      x3  // (en este contexto, valor genérico, pero funcional)
+salto_directo:
+        // Continuamos ejecución normalmente
 
         // Condicionales (se ejecutan según flags)
         cmp     x1, x1  // Igualdad

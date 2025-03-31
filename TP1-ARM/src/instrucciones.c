@@ -23,32 +23,14 @@ int64_t sign_extend(uint64_t value, int bits) {
 //Instrucciones de ARM-V8
 
 void add_immediate(uint32_t instr){
-    int32_t rd = instr & 0x1F;             // bits [4:0]
-    uint32_t rn = (instr >> 5) & 0x1F;      // bits [9:5]
-    uint32_t rm = (instr >> 16) & 0x1F;     // bits [20:16]
-    uint32_t imm6 = (instr >> 10) & 0x3F;   // bits [15:10]
-    uint32_t shift_type = (instr >> 22) & 0x3; // bits [23:22]
+    uint32_t rd = instr & 0x1F;              // bits [4:0]
+    uint32_t rn = (instr >> 5) & 0x1F;       // bits [9:5]
+    uint32_t imm12 = (instr >> 10) & 0xFFF;  // bits [21:10]
+    uint32_t shift = (instr >> 22) & 0x1;    // bit [22]
 
-    uint64_t operand2 = CURRENT_STATE.REGS[rm];
+    uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
 
-    // Aplicar el shift correspondiente
-    switch (shift_type) {
-        case 0b00: // LSL
-            operand2 <<= imm6;
-            break;
-        case 0b01: // LSR
-            operand2 >>= imm6;
-            break;
-        case 0b10: // ASR
-            operand2 = ((int64_t)operand2) >> imm6;
-            break;
-        default:
-            printf("Shift inválido para ADD (shift=%u)\n", shift_type);
-            RUN_BIT = 0;
-            return;
-    }
-
-    NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rn] + operand2;
+    NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rn] + imm;
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
@@ -303,9 +285,12 @@ void b(uint32_t instr){
 }
 
 void br(uint32_t instr){
-    uint32_t rn = (instr >> 5) & 0x1F; // bits [9:5] — registro que contiene la dirección
-    NEXT_STATE.PC = CURRENT_STATE.REGS[rn]; // salto incondicional
-}   
+    uint32_t rn = (instr >> 5) & 0x1F; // bits [9:5]
+    printf("Ejecutando BR a: 0x%08lx\n", CURRENT_STATE.REGS[rn]);
+    printf("Instrucción en destino: 0x%08x\n", mem_read_32(CURRENT_STATE.REGS[rn]));
+    NEXT_STATE.PC = CURRENT_STATE.REGS[rn];
+}
+
 
 void b_cond(uint32_t instr){
     uint32_t cond = instr & 0xF; // bits [3:0]
