@@ -285,9 +285,12 @@ void b(uint32_t instr){
 }
 
 void br(uint32_t instr){
-    uint32_t rn = (instr >> 5) & 0x1F; // bits [9:5] — registro que contiene la dirección
-    NEXT_STATE.PC = CURRENT_STATE.REGS[rn]; // salto incondicional
-}   
+    uint32_t rn = (instr >> 5) & 0x1F; // bits [9:5]
+    printf("Ejecutando BR a: 0x%08lx\n", CURRENT_STATE.REGS[rn]);
+    printf("Instrucción en destino: 0x%08x\n", mem_read_32(CURRENT_STATE.REGS[rn]));
+    NEXT_STATE.PC = CURRENT_STATE.REGS[rn];
+}
+
 
 void b_cond(uint32_t instr){
     uint32_t cond = instr & 0xF; // bits [3:0]
