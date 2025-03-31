@@ -37,10 +37,10 @@ El proyecto pretende ser un simulador de la arquitectura ARMv8, tiene que ser ca
 Ahora deberías tener un archivo ejecutable llamado "sim".
 
 2. Usa "asm2hex" para convertir las entradas de prueba ("*.s") en hexdumps del código de máquina ensamblado ("*.x").
-
-          cd inputs/
+  cd inputs/
           ./asm2hex addis.s
 
+        
 Ahora deberías tener un hexdump del código de máquina ensamblado "addis.x". Repite este paso para el resto de las entradas de prueba.
 
 Es posible que necesites otorgarle permisos de ejecución a este archivo. Los permisos se pueden habilitar con el siguiente comando:  

@@ -20,13 +20,12 @@ int64_t sign_extend(uint64_t value, int bits) {
     return (value ^ mask) - mask;
 }
 
-//Instrucciones de ARM-V8
 
 void add_immediate(uint32_t instr){
-    uint32_t rd = instr & 0x1F;              // bits [4:0]
-    uint32_t rn = (instr >> 5) & 0x1F;       // bits [9:5]
-    uint32_t imm12 = (instr >> 10) & 0xFFF;  // bits [21:10]
-    uint32_t shift = (instr >> 22) & 0x1;    // bit [22]
+    uint32_t rd = instr & 0x1F;              
+    uint32_t rn = (instr >> 5) & 0x1F;      
+    uint32_t imm12 = (instr >> 10) & 0xFFF;  
+    uint32_t shift = (instr >> 22) & 0x1;    
 
     uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
 
@@ -51,63 +50,50 @@ void add_shifted_register(uint32_t instr){
 }
 
 void adds_immediate(uint32_t instr) {
-    uint32_t rd = instr & 0x1F;             // Extract destination register (bits [4:0])
-    uint32_t rn = (instr >> 5) & 0x1F;      // Extract first operand register (bits [9:5])
-    uint32_t imm12 = (instr >> 10) & 0xFFF; // Extract 12-bit immediate value (bits [21:10])
-    uint32_t shift = (instr >> 22) & 0x3;   // Extract shift type (bits [23:22])
+    uint32_t rd = instr & 0x1F;             
+    uint32_t rn = (instr >> 5) & 0x1F;      
+    uint32_t imm12 = (instr >> 10) & 0xFFF;
+    uint32_t shift = (instr >> 22) & 0x3;   
 
-    // Apply shift to the immediate value if required
     uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
 
-    // Perform addition of the first operand and the immediate value
     int64_t result = CURRENT_STATE.REGS[rn] + imm;
 
-    // Update the processor flags (Zero and Negative) based on the result
     update_flags(result);
 
-    // Write the result to the destination register if it's not XZR (zero register)
     if (rd != XZR) NEXT_STATE.REGS[rd] = result;
 
-    // Increment the program counter to point to the next instruction
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
 void adds_extended_register(uint32_t instr) {
-    uint32_t rd = instr & 0x1F;        // Destino Xd (bits 4-0)
-    uint32_t rn = (instr >> 5) & 0x1F; // Primer operando Xn (bits 9-5)
-    uint32_t rm = (instr >> 16) & 0x1F;// Segundo operando Xm (bits 20-16)
+    uint32_t rd = instr & 0x1F;        
+    uint32_t rn = (instr >> 5) & 0x1F; 
+    uint32_t rm = (instr >> 16) & 0x1F;
 
     int64_t result = CURRENT_STATE.REGS[rn] + CURRENT_STATE.REGS[rm];
 
-    // Guardar el resultado en el registro destino
     NEXT_STATE.REGS[rd] = result;
 
-    // Actualizar flags
     update_flags(result);
 
-    // Incrementar el PC
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
 void subs_immediate(uint32_t instr){
-    uint32_t rd = instr & 0x1F;             // bits [4:0]
-    uint32_t rn = (instr >> 5) & 0x1F;      // bits [9:5]
-    uint32_t imm12 = (instr >> 10) & 0xFFF; // bits [21:10]
-    uint32_t shift = (instr >> 22) & 0x3;   // bits [23:22]
+    uint32_t rd = instr & 0x1F;             
+    uint32_t rn = (instr >> 5) & 0x1F;      
+    uint32_t imm12 = (instr >> 10) & 0xFFF; 
+    uint32_t shift = (instr >> 22) & 0x3;   
 
-    // Aplica shift al valor inmediato si es necesario
     uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
 
-    // Realiza la resta: operand1 - inmediato
     int64_t result = CURRENT_STATE.REGS[rn] - imm;
 
-    // Actualiza los flags N y Z
     update_flags(result);
 
-    // Guarda el resultado en rd si no es XZR
     if (rd != XZR) NEXT_STATE.REGS[rd] = result;
 
-    // Avanza el program counter
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
@@ -118,10 +104,8 @@ void subs_extended_register(uint32_t instr){
 
         int64_t result = CURRENT_STATE.REGS[rn] - CURRENT_STATE.REGS[rm];
 
-        // Si no es CMP, guardar resultado
         if (rd != XZR) NEXT_STATE.REGS[rd] = result;
 
-        // Update flags
         update_flags(result);
 
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
@@ -179,9 +163,9 @@ void orr(uint32_t instr){
 }
 
 void movz(uint32_t instr){
-    uint32_t rd = instr & 0x1F;                 // bits [4:0]: destino
-        uint64_t imm16 = (instr >> 5) & 0xFFFF;     // bits [20:5]: inmediato de 16 bits
-        uint32_t hw = (instr >> 21) & 0x3;          // bits [22:21]: shift selector (hw)
+    uint32_t rd = instr & 0x1F;                 
+        uint64_t imm16 = (instr >> 5) & 0xFFFF;     
+        uint32_t hw = (instr >> 21) & 0x3;          
     
         if (hw == 0) {
             NEXT_STATE.REGS[rd] = imm16;
@@ -194,7 +178,7 @@ void stur(uint32_t instr){
     uint32_t rt = instr & 0x1F;
         uint32_t rn = (instr >> 5) & 0x1F;
         int32_t imm9 = (instr >> 12) & 0x1FF;
-        imm9 = (imm9 << 23) >> 23;  // Sign-extend 9 bits
+        imm9 = (imm9 << 23) >> 23; 
     
         uint64_t addr = CURRENT_STATE.REGS[rn] + imm9;
         mem_write_32(addr, (uint32_t)(CURRENT_STATE.REGS[rt] & 0xFFFFFFFF));
@@ -211,7 +195,7 @@ void sturb(uint32_t instr){
     
         uint64_t addr = CURRENT_STATE.REGS[rn] + imm9;
         uint8_t byte_val = CURRENT_STATE.REGS[rt] & 0xFF;
-        mem_write_32(addr, byte_val);  // Solo escribimos 1 byte en realidad
+        mem_write_32(addr, byte_val);  
     
         NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
@@ -225,7 +209,6 @@ void sturh(uint32_t instr){
         uint64_t addr = CURRENT_STATE.REGS[rn] + imm9;
         uint16_t half = CURRENT_STATE.REGS[rt] & 0xFFFF;
     
-        // Escribimos los 2 bytes en dos write separados (o extendemos a 4)
         uint32_t value = mem_read_32(addr);
         value = (value & 0xFFFF0000) | half;
         mem_write_32(addr, value);
@@ -237,7 +220,7 @@ void ldur(uint32_t instr){
     uint32_t rt = instr & 0x1F;
         uint32_t rn = (instr >> 5) & 0x1F;
         int32_t imm9 = (instr >> 12) & 0x1FF;
-        imm9 = (imm9 << 23) >> 23;  // sign-extend de 9 bits
+        imm9 = (imm9 << 23) >> 23;  
     
         uint64_t addr = CURRENT_STATE.REGS[rn] + imm9;
     
@@ -252,10 +235,10 @@ void ldurb(uint32_t instr){
     uint32_t rt = instr & 0x1F;
     uint32_t rn = (instr >> 5) & 0x1F;
     int32_t imm9 = (instr >> 12) & 0x1FF;
-    imm9 = (imm9 << 23) >> 23;  // sign-extend 9 bits
+    imm9 = (imm9 << 23) >> 23;  
 
     uint64_t addr = CURRENT_STATE.REGS[rn] + imm9;
-    uint32_t word = mem_read_32(addr & ~0x3);  // leer la palabra alineada
+    uint32_t word = mem_read_32(addr & ~0x3);  
     uint8_t byte = (word >> ((addr & 0x3) * 8)) & 0xFF;
 
     NEXT_STATE.REGS[rt] = (uint64_t)byte;
@@ -277,15 +260,14 @@ void ldurh(uint32_t instr){
 }
 
 void b(uint32_t instr){
-     // Extraer immediate de 26 bits, shift-left por 2 para agregar los dos ceros
      int32_t imm26 = instr & 0x03FFFFFF;
-     int64_t offset = sign_extend(imm26 << 2, 28); // signo extendido a 64 bits
+     int64_t offset = sign_extend(imm26 << 2, 28); 
 
      NEXT_STATE.PC = CURRENT_STATE.PC + offset;
 }
 
 void br(uint32_t instr){
-    uint32_t rn = (instr >> 5) & 0x1F; // bits [9:5]
+    uint32_t rn = (instr >> 5) & 0x1F; 
     printf("Ejecutando BR a: 0x%08lx\n", CURRENT_STATE.REGS[rn]);
     printf("Instrucción en destino: 0x%08x\n", mem_read_32(CURRENT_STATE.REGS[rn]));
     NEXT_STATE.PC = CURRENT_STATE.REGS[rn];
@@ -293,7 +275,7 @@ void br(uint32_t instr){
 
 
 void b_cond(uint32_t instr){
-    uint32_t cond = instr & 0xF; // bits [3:0]
+    uint32_t cond = instr & 0xF; 
 
         bool should_branch = false;
 
@@ -317,13 +299,12 @@ void b_cond(uint32_t instr){
                 should_branch = (CURRENT_STATE.FLAG_Z == 1 || CURRENT_STATE.FLAG_N == 1);
                 break;
             default:
-                // No hacemos nada si es una condición no implementada
                 break;
         }
 
         if (should_branch) {
-            int32_t imm19 = (instr >> 5) & 0x7FFFF; // Extrae el desplazamiento de 19 bits
-            int64_t offset = sign_extend(imm19, 19) << 2; // Extiende el signo y ajusta el desplazamiento
+            int32_t imm19 = (instr >> 5) & 0x7FFFF; 
+            int64_t offset = sign_extend(imm19, 19) << 2;
     
             NEXT_STATE.PC = CURRENT_STATE.PC + offset;
         } else {
@@ -365,7 +346,6 @@ void lsl_lsr(uint32_t instr){
     
     
 
-    // Solo manejamos versión de 64 bits
     if (sf == 1 && N == 1) {
         enum { LSL, LSR, OTHER } op_type;
 
@@ -389,7 +369,7 @@ void lsl_lsr(uint32_t instr){
                 result = value >> immr;
                 break;
             case OTHER:
-                break; // No hacemos nada si no es LSL ni LSR
+                break; 
         }
 
         if (op_type != OTHER && rd != XZR) {
