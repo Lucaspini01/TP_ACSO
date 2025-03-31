@@ -91,24 +91,24 @@ void adds_extended_register(uint32_t instr) {
 
 void subs_immediate(uint32_t instr){
     uint32_t rd = instr & 0x1F;             // bits [4:0]
-        uint32_t rn = (instr >> 5) & 0x1F;      // bits [9:5]
-        uint32_t imm12 = (instr >> 10) & 0xFFF; // bits [21:10]
-        uint32_t shift = (instr >> 22) & 0x3;   // bits [23:22]
+    uint32_t rn = (instr >> 5) & 0x1F;      // bits [9:5]
+    uint32_t imm12 = (instr >> 10) & 0xFFF; // bits [21:10]
+    uint32_t shift = (instr >> 22) & 0x3;   // bits [23:22]
 
-        // Aplica shift al valor inmediato si es necesario
-        uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
+    // Aplica shift al valor inmediato si es necesario
+    uint64_t imm = (shift == 1) ? (imm12 << 12) : imm12;
 
-        // Realiza la resta: operand1 - inmediato
-        int64_t result = CURRENT_STATE.REGS[rn] - imm;
+    // Realiza la resta: operand1 - inmediato
+    int64_t result = CURRENT_STATE.REGS[rn] - imm;
 
-        // Actualiza los flags N y Z
-        update_flags(result);
+    // Actualiza los flags N y Z
+    update_flags(result);
 
-        // Guarda el resultado en rd si no es XZR
-        if (rd != XZR) NEXT_STATE.REGS[rd] = result;
+    // Guarda el resultado en rd si no es XZR
+    if (rd != XZR) NEXT_STATE.REGS[rd] = result;
 
-        // Avanza el program counter
-        NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+    // Avanza el program counter
+    NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
 void subs_extended_register(uint32_t instr){
@@ -295,13 +295,6 @@ void br(uint32_t instr){
 void b_cond(uint32_t instr){
     uint32_t cond = instr & 0xF; // bits [3:0]
 
-        //
-        int FLAG_N = CURRENT_STATE.FLAG_N;
-        int FLAG_Z = CURRENT_STATE.FLAG_Z;
-        int FLAG_C = 0; // No se usa en este caso
-        int FLAG_V = 0; // No se usa en este caso
-        // Verificar la condición
-
         bool should_branch = false;
 
         switch (cond) {
@@ -312,7 +305,7 @@ void b_cond(uint32_t instr){
                 should_branch = (CURRENT_STATE.FLAG_Z == 0);
                 break;
             case 0b1010: // BGE
-                should_branch = (CURRENT_STATE.FLAG_N == FLAG_V);
+                should_branch = (CURRENT_STATE.FLAG_N == 0);
                 break;
             case 0b1011: // BLT
                 should_branch = (CURRENT_STATE.FLAG_N == 1);
