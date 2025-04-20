@@ -1,0 +1,20 @@
+Nombre: Lucas Pini 
+email: pinil@udesa.edu.ar 
+
+Fase 1:
+En esta fase el codigo comparaba el string de input ingresado con un string fijo almacenado en el ejecutable. Se mostraba un call a una funcion strings_not_equal que chequeaba si el resultado era distinto de cero la bomba explotaba.
+Con gdb y ayudandome con el desensamblado se vio que se cargaba en rsi un string. Use x/s con la direccion para poder ver ese string que resulto ser una frase y usarlo de input.
+
+Fase 2:
+En esta fase era necesario ingresar tres numeros. El codigo los parseaba con strol y despues se aplicaba una condicion (B ^ A) >> 1 == C
+Ademas, c debia ser negativo porque luego pasaba a la funcion misterio que explotaba si el valor era mayor o igual a cero
+
+Fase 3:
+En esta fase se necesitaba una palabra y un numero. El codigo ejecutaba la funcion cuenta que desensamblandola se descubrio que hacia una busqueda binaria recursiva.
+Cada vez que cuenta comparaba la palabra ingresada con una palabra de palabras.txt lo hacia calculando un indice medio = (start + end) / 2, y si no coincidía, se iba a una mitad del rango. Sumaba cada índice visitado en el proceso. El numero correcto a ingresar era la suma de esos índices hasta llegar a la palabra.
+Para la palabra "herniarse" utilizada, el camino de búsqueda binaria acumulaba los índices: 5392 + 8088 + 6740 + 7414 + 7077 + 6908 + 6824 = 48443, y ajustando el corrimiento de índices (de 1 a 0), se obtuvo el número correcto: 48436.
+
+Fase 4:
+En esta etapa se ingresaba un string de 6 caracteres que eran procesados byte por byte. Este string era transformado caracter por caracter usando una tabla de 16 letras. Para cada caracter del input, extraia los 4 bits menos significativos que tienen el valor ASCI del caracter. Esto daba un numero entre 0 y 15 que se usaba como indice para la tabla y se construye un string nuevo con las letras correspondientes.
+La bomba comparaba ese string con una palabra fija, en este caso "depila". Para pasar la fase, el input debia ser una combinación de caracteres donde los 4 bits mas bajos coincidieran con los índices que forman "depila" en la tabla. Así se llegó a el string correcto: ",09&/%".
+

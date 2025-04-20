@@ -1,16 +1,65 @@
 #include "ej1.h"
 
 string_proc_list* string_proc_list_create(void){
+    string_proc_list* list = (string_proc_list*) malloc(sizeof(string_proc_list));
+    if (list == NULL) {
+        return NULL; // manejo básico de error
+    }
+    list->first = NULL;
+    list->last = NULL;
+    return list;
 }
+
 
 string_proc_node* string_proc_node_create(uint8_t type, char* hash){
+    string_proc_node* node = (string_proc_node*) malloc(sizeof(string_proc_node));
+    if (node == NULL) {
+        return NULL; // manejo básico de error
+    }
+    node->type = type;
+    node->hash = hash; // NO copiar, solo apuntar
+    node->next = NULL;
+    node->previous = NULL;
+    return node;
 }
 
+
 void string_proc_list_add_node(string_proc_list* list, uint8_t type, char* hash){
+    if (list == NULL) return;
+
+    string_proc_node* new_node = string_proc_node_create(type, hash);
+    if (new_node == NULL) return;
+
+    if (list->last == NULL) {
+        // Lista vacía
+        list->first = new_node;
+        list->last = new_node;
+    } else {
+        // Lista no vacía
+        new_node->previous = list->last;
+        list->last->next = new_node;
+        list->last = new_node;
+    }
 }
 
 char* string_proc_list_concat(string_proc_list* list, uint8_t type , char* hash){
+    char* result = (char*) malloc(strlen(hash) + 1);
+	if (result == NULL) return NULL;
+	strcpy(result, hash);
+
+
+    string_proc_node* current = list->first;
+    while (current != NULL) {
+        if (current->type == type) {
+            char* temp = str_concat(result, current->hash); // str_concat ya hace malloc
+            free(result);
+            result = temp;
+        }
+        current = current->next;
+    }
+    return result;
 }
+
 
 
 /** AUX FUNCTIONS **/

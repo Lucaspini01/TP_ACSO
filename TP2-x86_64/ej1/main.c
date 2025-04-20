@@ -48,8 +48,10 @@ void test_list_concat()
 	free(new_hash);
 }
 
+
+
 /**
-* Corre los test a se escritos por lxs alumnxs	
+* Corre los test a se escritos por los alumnos	
 */
 void run_tests(){
 
@@ -61,7 +63,9 @@ void run_tests(){
 	test_create_list_add_nodes();
 
 	test_list_concat();
+	
 }
+
 
 int main (void){
 	run_tests();
