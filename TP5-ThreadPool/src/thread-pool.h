@@ -15,9 +15,12 @@
 #include <thread>      // for thread
 #include <vector>      // for vector
 #include "Semaphore.h" // for Semaphore
+#include <queue>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 
 using namespace std;
-
 
 /**
  * @brief Represents a worker in the thread pool.
@@ -31,9 +34,9 @@ using namespace std;
 typedef struct worker {
     thread ts;
     function<void(void)> thunk;
-    /**
-     * Complete the definition of the worker_t struct here...
-     **/
+    Semaphore ready{0};
+    atomic<bool> available{true};
+    mutex mtx;
 } worker_t;
 
 class ThreadPool {
@@ -67,13 +70,24 @@ class ThreadPool {
     ~ThreadPool();
     
   private:
-
     void worker(int id);
     void dispatcher();
-    thread dt;                              // dispatcher thread handle
-    vector<worker_t> wts;                   // worker thread handles. you may want to change/remove this
-    bool done;                              // flag to indicate the pool is being destroyed
-    mutex queueLock;                        // mutex to protect the queue of tasks
+    
+    thread dt;
+    vector<worker_t> wts;
+    atomic<bool> done{false};
+
+    mutex queueLock;
+    queue<function<void(void)>> taskQueue;
+
+    Semaphore dispatcherReady{0};
+    
+    int pendingTasks = 0;
+    mutex pendingLock;
+    condition_variable_any tasksDoneCV;
+
+    bool alive = true;
+    mutex aliveLock;
 
     /* It is incomplete, there should be more private variables to manage the structures... 
     * *
